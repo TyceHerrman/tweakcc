@@ -70,6 +70,9 @@ import { writeAllowBypassPermsInSudo } from './allowBypassPermsInSudo';
 import { writeSuppressNativeInstallerWarning } from './suppressNativeInstallerWarning';
 import { writeScrollEscapeSequenceFilter } from './scrollEscapeSequenceFilter';
 import { writeWorktreeMode } from './worktreeMode';
+import { writeAllowCustomAgentModels } from './allowCustomAgentModels';
+import { writeVoiceMode } from './voiceMode';
+import { writeChannelsMode } from './channelsMode';
 import {
   restoreNativeBinaryFromBackup,
   restoreClijsFromBackup,
@@ -147,30 +150,11 @@ const PATCH_DEFINITIONS = [
     description: 'Token counter will show (2s · ↓ 169 tokens · thinking)',
   },
   {
-    id: 'context-limit',
-    name: 'Context limit',
-    group: PatchGroup.ALWAYS_APPLIED,
-    description:
-      'Set the CLAUDE_CODE_CONTEXT_LIMIT env var to change 200k max for custom models',
-  },
-  {
-    id: 'model-customizations',
-    name: 'Model customizations',
-    group: PatchGroup.ALWAYS_APPLIED,
-    description: 'Access all Claude models with /model, not just latest 3',
-  },
-  {
     id: 'opusplan1m',
     name: 'Opusplan[1m] support',
     group: PatchGroup.ALWAYS_APPLIED,
     description:
       'Use the "Opus Plan 1M" model: Opus for planning, Sonnet 1M context for building',
-  },
-  {
-    id: 'show-more-items-in-select-menus',
-    name: 'Show more items in select menus',
-    group: PatchGroup.ALWAYS_APPLIED,
-    description: 'Show 25 items in select menus instead of default 5',
   },
   {
     id: 'thinking-block-styling',
@@ -191,6 +175,25 @@ const PATCH_DEFINITIONS = [
     description: `Statusline updates will be properly throttled instead of queued (or debounced)`,
   },
   // Misc Configurable
+  {
+    id: 'model-customizations',
+    name: 'Model customizations',
+    group: PatchGroup.MISC_CONFIGURABLE,
+    description: 'Access all Claude models with /model, not just latest 3',
+  },
+  {
+    id: 'show-more-items-in-select-menus',
+    name: 'Show more items in select menus',
+    group: PatchGroup.MISC_CONFIGURABLE,
+    description: 'Show 25 items in select menus instead of default 5',
+  },
+  {
+    id: 'context-limit',
+    name: 'Context limit',
+    group: PatchGroup.MISC_CONFIGURABLE,
+    description:
+      'Override the 200K context limit via CLAUDE_CODE_CONTEXT_LIMIT env var (set before launching CC)',
+  },
   {
     id: 'patches-applied-indication',
     name: 'Patches applied indication',
@@ -357,6 +360,13 @@ const PATCH_DEFINITIONS = [
   },
   // Features
   {
+    id: 'allow-custom-agent-models',
+    name: 'Allow custom agent models',
+    group: PatchGroup.FEATURES,
+    description:
+      'Allow arbitrary model names in custom agent frontmatter (e.g. gemini-2.5-flash)',
+  },
+  {
     id: 'worktree-mode',
     name: 'Worktree mode',
     group: PatchGroup.FEATURES,
@@ -405,6 +415,20 @@ const PATCH_DEFINITIONS = [
     name: 'Conversation title',
     group: PatchGroup.FEATURES,
     description: '/title command will be created & enabled',
+  },
+  {
+    id: 'voice-mode',
+    name: 'Voice mode',
+    group: PatchGroup.FEATURES,
+    description:
+      'Enable /voice command for speech-to-text input (hold Space to record)',
+  },
+  {
+    id: 'channels-mode',
+    name: 'Channels mode',
+    group: PatchGroup.FEATURES,
+    description:
+      'Enable MCP channel notifications (--channels without allowlist or dev flag)',
   },
 ] as const;
 
@@ -605,6 +629,10 @@ export const applyCustomization = async (
   // ==========================================================================
   // Define patch implementations (keyed by PatchId)
   // ==========================================================================
+  // Keep model list customization and select-menu size behavior in sync.
+  // Disabling model customizations should restore both selectors to vanilla CC behavior.
+  const modelCustomizationsEnabled =
+    config.settings.misc?.enableModelCustomizations ?? true;
   const patchImplementations: Record<PatchId, PatchImplementation> = {
     // Always Applied
     'verbose-property': {
@@ -612,15 +640,10 @@ export const applyCustomization = async (
     },
     'context-limit': {
       fn: c => writeContextLimit(c),
-    },
-    'model-customizations': {
-      fn: c => writeModelCustomizations(c),
+      condition: !!config.settings.misc?.enableContextLimitOverride,
     },
     opusplan1m: {
       fn: c => writeOpusplan1m(c),
-    },
-    'show-more-items-in-select-menus': {
-      fn: c => writeShowMoreItemsInSelectMenus(c, 25),
     },
     'thinking-block-styling': {
       fn: c => writeThinkingBlockStyling(c),
@@ -645,11 +668,19 @@ export const applyCustomization = async (
       fn: c =>
         writePatchesAppliedIndication(
           c,
-          '4.0.10',
+          '4.0.11',
           legacyItems,
           showTweakccVersion,
           showPatchesApplied
         ),
+    },
+    'model-customizations': {
+      fn: c => writeModelCustomizations(c),
+      condition: modelCustomizationsEnabled,
+    },
+    'show-more-items-in-select-menus': {
+      fn: c => writeShowMoreItemsInSelectMenus(c, 25),
+      condition: modelCustomizationsEnabled,
     },
     'table-format': {
       fn: c => writeTableFormat(c, tableFormat),
@@ -786,6 +817,10 @@ export const applyCustomization = async (
       condition: !!config.settings.misc?.filterScrollEscapeSequences,
     },
     // Features
+    'allow-custom-agent-models': {
+      fn: c => writeAllowCustomAgentModels(c),
+      condition: !!config.settings.misc?.allowCustomAgentModels,
+    },
     'worktree-mode': {
       fn: c => writeWorktreeMode(c),
       condition:
@@ -840,6 +875,18 @@ export const applyCustomization = async (
           ccInstInfo.version &&
           compareVersions(ccInstInfo.version, '2.0.64') < 0
         ),
+    },
+    'voice-mode': {
+      fn: c =>
+        writeVoiceMode(
+          c,
+          config.settings.misc?.enableVoiceConciseOutput ?? true
+        ),
+      condition: !!config.settings.misc?.enableVoiceMode,
+    },
+    'channels-mode': {
+      fn: c => writeChannelsMode(c),
+      condition: !!config.settings.misc?.enableChannelsMode,
     },
   };
 

@@ -79,6 +79,12 @@ export function MiscView({ onSubmit }: MiscViewProps) {
     suppressNativeInstallerWarning: false,
     filterScrollEscapeSequences: false,
     enableWorktreeMode: true,
+    allowCustomAgentModels: false,
+    enableContextLimitOverride: false,
+    enableModelCustomizations: true,
+    enableVoiceMode: false,
+    enableVoiceConciseOutput: true,
+    enableChannelsMode: false,
   };
 
   const ensureMisc = () => {
@@ -220,6 +226,20 @@ export function MiscView({ onSubmit }: MiscViewProps) {
             ensureMisc();
             settings.misc!.enableConversationTitle =
               !settings.misc!.enableConversationTitle;
+          });
+        },
+      },
+      {
+        id: 'enableModelCustomizations',
+        title: 'Enable model customizations (/model shows all models)',
+        description:
+          'Show all Claude models in /model menu, not just the latest 3. Disable to use Claude Code default model list.',
+        getValue: () => settings.misc?.enableModelCustomizations ?? true,
+        toggle: () => {
+          updateSettings(settings => {
+            ensureMisc();
+            settings.misc!.enableModelCustomizations =
+              !settings.misc!.enableModelCustomizations;
           });
         },
       },
@@ -384,6 +404,61 @@ export function MiscView({ onSubmit }: MiscViewProps) {
             ensureMisc();
             settings.misc!.enableWorktreeMode =
               !settings.misc!.enableWorktreeMode;
+          });
+        },
+      },
+      {
+        id: 'enableVoiceMode',
+        title: 'Enable voice mode (/voice command)',
+        description:
+          'Force-enable the /voice command by bypassing the tengu_amber_quartz feature gate.',
+        getValue: () => settings.misc?.enableVoiceMode ?? false,
+        toggle: () => {
+          updateSettings(settings => {
+            ensureMisc();
+            settings.misc!.enableVoiceMode = !settings.misc!.enableVoiceMode;
+          });
+        },
+      },
+      {
+        id: 'enableVoiceConciseOutput',
+        title: 'Enable concise output for voice mode',
+        description:
+          'Enable the concise-output prompt used for voice interactions. Only applies when voice mode is enabled.',
+        getValue: () => settings.misc?.enableVoiceConciseOutput ?? true,
+        toggle: () => {
+          updateSettings(settings => {
+            ensureMisc();
+            settings.misc!.enableVoiceConciseOutput =
+              !settings.misc!.enableVoiceConciseOutput;
+          });
+        },
+      },
+      {
+        id: 'enableChannelsMode',
+        title: 'Enable channels mode (MCP channel notifications)',
+        description:
+          'Force-enable MCP channel notifications by bypassing the tengu_harbor feature gate, allowlist, and permission relay.',
+        getValue: () => settings.misc?.enableChannelsMode ?? false,
+        toggle: () => {
+          updateSettings(settings => {
+            ensureMisc();
+            settings.misc!.enableChannelsMode =
+              !settings.misc!.enableChannelsMode;
+          });
+        },
+      },
+      {
+        id: 'enableContextLimitOverride',
+        title: 'Override context limit',
+        description:
+          'Replaces the default model context limit with CLAUDE_CODE_CONTEXT_LIMIT env var. Must be exported manually before launching CC, or falls back to 200K.',
+        getValue: () => settings.misc?.enableContextLimitOverride ?? false,
+        toggle: () => {
+          updateSettings(settings => {
+            ensureMisc();
+            settings.misc!.enableContextLimitOverride =
+              !settings.misc!.enableContextLimitOverride;
           });
         },
       },
@@ -565,6 +640,20 @@ export function MiscView({ onSubmit }: MiscViewProps) {
             ensureMisc();
             settings.misc!.filterScrollEscapeSequences =
               !settings.misc!.filterScrollEscapeSequences;
+          });
+        },
+      },
+      {
+        id: 'allowCustomAgentModels',
+        title: 'Allow custom agent models',
+        description:
+          'Allow arbitrary model names in custom agent frontmatter (e.g. gemini-2.5-flash). Useful with a local proxy for non-Claude models.',
+        getValue: () => settings.misc?.allowCustomAgentModels ?? false,
+        toggle: () => {
+          updateSettings(settings => {
+            ensureMisc();
+            settings.misc!.allowCustomAgentModels =
+              !settings.misc!.allowCustomAgentModels;
           });
         },
       },
